@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>All Employees Attendance</h1>
+{% if current_user.username == "admin1" %}
+<form action="{{ url_for('export_attendance_csv') }}" method="GET">
+    <button type="submit">Save as CSV</button>
+</form>
+{% endif %}
+{% for attendance, user in all_attendance %}
+<p>Employee: {{ user.username }}</p>
+<p>Date: {{ attendance.date.strftime('%Y-%m-%d') }}</p>
+<p>Status: {{ attendance.status }}</p>
+<p>Time of submission: {{ attendance.time_of_submission.strftime("%H:%M:%S") }}</p>
+<p>Location: {{ attendance.location }}</p>
+<hr>
+{% endfor %}
+{% endblock content %}

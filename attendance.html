@@ -1,5 +1,29 @@
 {% extends "base.html" %}
-
 {% block content %}
-<h1>Attendance Page</h1>
-{% endblock %}
+<h1>Attendance</h1>
+<form method="POST">
+    {{ form.hidden_tag() }}
+    <div class="form-group">
+        {{ form.date.label }} {{ form.date(class="form-control", type="date") }}
+    </div>
+
+    <div class="form-group">
+        {{ form.status.label }} {{ form.status }}
+    </div>
+    {{ form.submit() }}
+</form>
+<hr>
+<h2>Your attendance log</h2>
+{% for attendance in attendances %}
+<p>Date: {{ attendance.date.strftime("%Y-%m-%d") }}</p>
+<p>Status: {{ attendance.status }}</p>
+<p>Time of submission: {{ attendance.time_of_submission.strftime("%H:%M:%S") }}</p>
+<p>Location: {{ attendance.location }}</p>
+<hr>
+{% endfor %}
+<hr>
+{% if current_user.username == 'admin1' %}
+<a href="{{ url_for('all_attendance') }}" class="btn btn-primary">View All Employees Attendance</a>
+{% endif %}
+</div>
+{% endblock content %}

@@ -8,22 +8,19 @@
 
     <meta charset="UTF-8">
     <title>{% block title %}{% endblock %}</title>
+    {% macro render_field(field) %}
+    <div class="form-group">
+        {{ field.label(class_="form-control-label") }}
+        {{ field(class_="form-control form-control-lg") }}
+        {% if field.errors %}
+        {% for error in field.errors %}
+        <span class="help-block">{{ error }}</span>
+        {% endfor %}
+        {% endif %}
+    </div>
+    {% endmacro %}
+
     <!-- Add CSS and JS links here -->
-
-    <style>
-        .flashes {
-            width: 100%;
-            margin-bottom: 20px;
-        }
-
-        .flash-message {
-            background-color: #f8d7da;
-            color: #721c24;
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 5px;
-        }
-    </style>
 </head>
 
 <body>
@@ -41,6 +38,10 @@
                         <a class="nav-link" href="{{ url_for('attendance') }}">Attendance Submission</a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('off_balance') }}">Off Balance</a>
+                    </li>
+
+                    <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('announcements') }}">Announcements</a>
                     </li>
                     <li class="nav-item">
@@ -57,13 +58,13 @@
 
     <main>
         <!-- Flash messages -->
-        {% with messages = get_flashed_messages() %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-        <div class="flashes">
-            {% for message in messages %}
-            <div class="flash-message">{{ message }}</div>
-            {% endfor %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">
+            {{ message }}
         </div>
+        {% endfor %}
         {% endif %}
         {% endwith %}
 

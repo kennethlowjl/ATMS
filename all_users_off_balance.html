@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+</head>
+
+<body>
+    <h1>All Users Off Balance</h1>
+
+    <ul>
+        {% for user in users %}
+        <li>{{ user.username }} - Off Balance: {{ user.off_balance }}</li>
+        {% endfor %}
+    </ul>
+
+</body>
+
+</html>
+
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div>
+    <h1>Off Balance: {{ off_balance }}</h1>
+</div>
+
+{% if current_user.username == "admin1" %}
+<h2>Update Off Balance</h2>
+<form action="{{ url_for('update_off_balance') }}" method="post">
+    {{ form.hidden_tag() }}
+    <div>
+        {{ form.usernames.label }}<br>
+        {{ form.usernames }}
+    </div>
+    <div>
+        {{ form.off_balance.label }}<br>
+        {{ form.off_balance }}
+    </div>
+    {{ form.add() }} {{ form.subtract() }}
+</form>
+
+<form action="{{ url_for('all_users_off_balance') }}" method="get">
+    <input type="submit" value="All Users Off Balance">
+</form>
+
+{% endif %}
+{% endblock %}

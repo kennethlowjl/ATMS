@@ -1,5 +1,38 @@
 {% extends "base.html" %}
-
+{% import "macros.html" as macros %}
 {% block content %}
-<h1>Tasks Page</h1>
-{% endblock %}
+<div class="content-section">
+    {% if current_user.username == "admin1" and form %}
+    <form method="POST">
+        {{ form.hidden_tag() }}
+        <fieldset class="form-group">
+            <legend class="border-bottom mb-4">Assign Task</legend>
+            {{ macros.render_field(form.task_name) }}
+            {{ macros.render_field(form.assigned_to) }}
+        </fieldset>
+        <div class="form-group">
+            <input type="submit" class="btn btn-outline-info" value="Assign Task">
+        </div>
+    </form>
+    {% endif %}
+
+    <h2 class="border-bottom mb-4">To be completed</h2>
+    {% for task in to_be_completed_tasks %}
+    <div class="media-body">
+        <h5 class="mt-0">{{ task.task_name }}</h5>
+        Assigned to: {{ task.assigned_to }}<br>
+        Created by: {{ task.created_by }}<br>
+        <a href="{{ url_for('complete_task', task_id=task.id) }}" class="btn btn-outline-success">Mark as Completed</a>
+    </div>
+    {% endfor %}
+
+    <h2 class="border-bottom mb-4">Completed</h2>
+    {% for task in completed_tasks %}
+    <div class="media-body">
+        <h5 class="mt-0">{{ task.task_name }}</h5>
+        Assigned to: {{ task.assigned_to }}<br>
+        Created by: {{ task.created_by }}
+    </div>
+    {% endfor %}
+</div>
+{% endblock content %}
