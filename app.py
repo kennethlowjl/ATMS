@@ -142,7 +142,7 @@ def attendance():
         print("Current User ID: ", current_user.id)
         date = form.date.data
         gmaps = googlemaps.Client(
-            key='AIzaSyDaSOYJH2Ak5nMD2p55MtdipOi270GgZGM')
+            key='hidden')
         geolocate_result = gmaps.geolocate()
 
         lat = geolocate_result['location']['lat']
