@@ -3,27 +3,100 @@
 <h1>Attendance</h1>
 <form method="POST">
     {{ form.hidden_tag() }}
+    <div id="calendar">
+        <div class="form-group">
+            <label for="month">Month</label>
+            <input id="month" name="month" class="form-control" type="number" min="1" max="12" value="{{current_month}}"
+                required>
+        </div>
+        <div class="form-group">
+            <label for="year">Year</label>
+            <input id="year" name="year" class="form-control" type="number" min="2000" max="3000"
+                value="{{current_year}}" required>
+        </div>
+        <button type="button" id="loadCalendar" class="btn btn-primary">Load Calendar</button>
+        <table class="table table-bordered">
+            <thead>
+                <tr id="usersRow"></tr>
+            </thead>
+            <tbody id="datesBody"></tbody>
+        </table>
+    </div>
+    <hr>
+
     <div class="form-group">
-        {{ form.date.label }} {{ form.date(class="form-control", type="date") }}
+        <label for="date">Date</label>
+        <input id="date" name="date" class="form-control" type="text" required>
     </div>
 
     <div class="form-group">
         {{ form.status.label }} {{ form.status }}
     </div>
+    <div class="form-group">
+        {{ form.duration.label }} {{ form.duration }}
+    </div>
+
     {{ form.submit() }}
 </form>
 <hr>
-<h2>Your attendance log</h2>
+<!-- <h2>Your attendance log</h2>
 {% for attendance in attendances %}
-<p>Date: {{ attendance.date.strftime("%Y-%m-%d") }}</p>
+<p>Date: {{ attendance.date.strftime('%Y-%m-%d') }}</p>
 <p>Status: {{ attendance.status }}</p>
+<p>Duration: {{ attendance.duration }}</p>
 <p>Time of submission: {{ attendance.time_of_submission.strftime("%H:%M:%S") }}</p>
 <p>Location: {{ attendance.location }}</p>
 <hr>
-{% endfor %}
+{% endfor %} -->
 <hr>
 {% if current_user.username == 'admin1' %}
 <a href="{{ url_for('all_attendance') }}" class="btn btn-primary">View All Employees Attendance</a>
 {% endif %}
 </div>
+<script src="https://cdn.jsdelivr.net/npm/litepicker/dist/litepicker.js"></script>
+<script>
+    var picker = new Litepicker({
+        element: document.getElementById('date'),
+        singleMode: false,
+        format: 'YYYY-MM-DD'
+    });
+
+    var users = {{ users| tojson | safe }};
+    function loadCalendar() {
+        var month = document.getElementById('month').value;
+        var year = document.getElementById('year').value;
+
+        fetch('/get_attendances?month=' + month + '&year=' + year)
+            .then(response => response.json())
+            .then(attendances => {
+                console.log(attendances);  // Debug print
+                var usersRow = document.getElementById('usersRow');
+                var datesBody = document.getElementById('datesBody');
+
+                usersRow.innerHTML = '';
+                datesBody.innerHTML = '';
+
+                var days = new Date(year, month, 0).getDate();
+                usersRow.innerHTML = '<th></th>' + Array.from({ length: days }, (_, i) => i + 1).map(function (day) {
+                    return '<th>' + day + '</th>';
+                }).join('');
+
+                for (var i = 0; i < users.length; i++) {
+                    var row = document.createElement('tr');
+                    var user = users[i];
+                    row.innerHTML = '<th>' + user + '</th>' + Array.from({ length: days }, (_, i) => i + 1).map(function (day) {
+                        var attendance = attendances.find(function (a) {
+                            return a.user === user && new Date(a.date).getDate() === day;
+                        });
+                        return '<td>' + (attendance ? attendance.status : '') + '</td>';
+                    }).join('');
+                    datesBody.appendChild(row);
+                }
+            });
+    }
+
+    document.getElementById('loadCalendar').addEventListener('click', loadCalendar);
+
+    loadCalendar();  // Load the calendar initially
+</script>
 {% endblock content %}

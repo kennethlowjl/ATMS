@@ -1,11 +1,11 @@
 from models import User
-from flask import Flask, render_template, url_for, redirect, flash, current_app, send_file
+from flask import Flask, render_template, url_for, redirect, flash, current_app, send_file, request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from flask_login import login_user, current_user, logout_user, login_required
 from extensions import db, login_manager
-from models import User, Attendance, Task
-from forms import LoginForm, RegistrationForm, ChangePasswordForm, AttendanceForm, TaskForm, UpdatePictureForm, OffBalanceForm
+from models import User, Attendance, Task, OffRequest
+from forms import LoginForm, RegistrationForm, ChangePasswordForm, AttendanceForm, TaskForm, UpdatePictureForm, OffBalanceForm, OffRequestForm
 from datetime import datetime, timedelta
 from flask_migrate import Migrate
 from io import BytesIO
@@ -105,17 +105,17 @@ def change_password():
     form = ChangePasswordForm()
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
-        if user and check_password_hash(user.password, form.current_password.data):
-            hashed_password = generate_password_hash(
-                form.new_password.data, method='sha256')
-            user.password = hashed_password
-            if form.picture.data:
-                user.image_file = form.picture.data.read()
-            db.session.commit()
-            flash('Your password has been updated!', 'success')
-            return redirect(url_for('login'))
-        else:
-            flash('Please check your login details and try again.', 'danger')
+        if user:
+            if check_password_hash(user.password, form.current_password.data):
+                hashed_password = generate_password_hash(
+                    form.new_password.data, method='sha256')
+                user.password = hashed_password
+                if form.picture.data:
+                    user.image_file = form.picture.data.read()
+                db.session.commit()
+                flash('Your password has been updated!', 'success')
+                return redirect(url_for('login'))
+        flash('Please check your login details and try again.', 'danger')
     return render_template('change_password.html', title='Change Password', form=form)
 
 
@@ -140,26 +140,43 @@ def attendance():
     if form.validate_on_submit():
         print("Form validation successful")
         print("Current User ID: ", current_user.id)
-        date = form.date.data
-        gmaps = googlemaps.Client(
-            key='hidden')
-        geolocate_result = gmaps.geolocate()
 
-        lat = geolocate_result['location']['lat']
-        lng = geolocate_result['location']['lng']
-        reverse_geocode_result = gmaps.reverse_geocode((lat, lng))
-
-        if reverse_geocode_result and len(reverse_geocode_result) > 0:
-            address = reverse_geocode_result[0]['formatted_address']
+        dates = request.form.get('date').split(' - ')
+        start_date = datetime.strptime(dates[0], '%Y-%m-%d')
+        if len(dates) == 2:
+            end_date = datetime.strptime(dates[1], '%Y-%m-%d')
         else:
-            # Fallback to lat, lng if reverse geocoding fails
-            address = f"{lat}, {lng}"
+            end_date = start_date
+        delta = end_date - start_date
 
-        time_of_submission = datetime.utcnow() + timedelta(hours=8)
+        for i in range(delta.days + 1):
+            date = start_date + timedelta(days=i)
 
-        attendance = Attendance(date=date, status=form.status.data,
-                                user_id=current_user.id, location=address, time_of_submission=time_of_submission)
-        db.session.add(attendance)
+            gmaps = googlemaps.Client(
+                key='AIzaSyDaSOYJH2Ak5nMD2p55MtdipOi270GgZGM')
+            geolocate_result = gmaps.geolocate()
+
+            lat = geolocate_result['location']['lat']
+            lng = geolocate_result['location']['lng']
+            reverse_geocode_result = gmaps.reverse_geocode((lat, lng))
+
+            if reverse_geocode_result and len(reverse_geocode_result) > 0:
+                address = reverse_geocode_result[0]['formatted_address']
+            else:
+                # Fallback to lat, lng if reverse geocoding fails
+                address = f"{lat}, {lng}"
+
+            time_of_submission = datetime.utcnow() + timedelta(hours=8)
+
+            if form.status.data == 'OFF':
+                off_request = OffRequest(date=date, user_id=current_user.id,
+                                         location=address, time_of_submission=time_of_submission, duration=form.duration.data)
+                db.session.add(off_request)
+            else:
+                attendance = Attendance(date=date, status=form.status.data, duration=form.duration.data,
+                                        user_id=current_user.id, location=address, time_of_submission=time_of_submission)
+                db.session.add(attendance)
+
         try:
             db.session.commit()
             print("Attendance committed successfully")
@@ -167,8 +184,65 @@ def attendance():
             return redirect(url_for('attendance'))
         except Exception as e:
             print("Error occurred during commit: ", e)
-    attendances = Attendance.query.filter_by(user_id=current_user.id).all()
-    return render_template('attendance.html', title='Attendance', form=form, attendances=attendances)
+
+    # Get current month and year
+    current_month = datetime.now().month
+    current_year = datetime.now().year
+
+    # Query all users
+    users = User.query.with_entities(User.username).all()
+    users = [user.username for user in User.query.all()]
+
+    # Query all attendances in the current month and year
+    attendances = Attendance.query.filter(
+        db.extract('month', Attendance.date) == current_month,
+        db.extract('year', Attendance.date) == current_year
+    ).all()
+    attendances = [
+        {
+            'user': a.user.username,
+            'date': a.date,
+            'status': a.status,
+            'time_of_submission': a.time_of_submission,
+            'duration': a.duration,
+            'location': a.location
+        }
+        for a in attendances
+    ]
+    # Render the template with additional parameters
+    return render_template(
+        'attendance.html',
+        form=form,
+        attendances=attendances,
+        users=users,
+        current_month=current_month,
+        current_year=current_year
+    )
+
+
+@app.route('/get_attendances', methods=['GET'])
+@login_required
+def get_attendances():
+    month = request.args.get('month')
+    year = request.args.get('year')
+
+    print(f"Month: {month}, Year: {year}")  # Debug print
+
+    attendances = Attendance.query.filter(
+        db.extract('month', Attendance.date) == month,
+        db.extract('year', Attendance.date) == year
+    ).join(User).all()
+
+    attendances = [
+        {
+            'user': a.user.username,
+            'date': a.date.isoformat(),
+            'status': a.status
+        }
+        for a in attendances
+    ]
+
+    return jsonify(attendances)
 
 
 @app.route("/off_balance", methods=['GET', 'POST'])
@@ -181,7 +255,10 @@ def off_balance():
     user = User.query.filter_by(username=current_user.username).first_or_404()
     off_balance = user.off_balance
 
-    return render_template('off_balance.html', off_balance=off_balance, form=form)
+    off_requests = OffRequest.query.filter_by(
+        status='Pending').all() if current_user.username == 'admin1' else []
+
+    return render_template('off_balance.html', off_balance=off_balance, form=form, off_requests=off_requests)
 
 
 @app.route("/update_off_balance", methods=['POST'])
@@ -219,6 +296,54 @@ def all_users_off_balance():
         abort(403)  # Forbidden access
     users = User.query.all()
     return render_template('all_users_off_balance.html', users=users)
+
+
+@app.route("/request_off", methods=['GET', 'POST'])
+@login_required
+def request_off():
+    form = OffRequestForm()
+    if form.validate_on_submit():
+        time_of_submission = datetime.utcnow() + timedelta(hours=8)
+        off_request = OffRequest(
+            date=datetime,
+            user_id=current_user.id,
+            time_of_submission=time_of_submission
+        )
+        db.session.add(off_request)
+        db.session.commit()
+        flash('Your off request has been submitted!', 'success')
+        return redirect(url_for('request_off'))
+    return render_template('request_off.html', title='Request Off', form=form)
+
+
+@app.route("/approve_off_request/<int:request_id>")
+@login_required
+def approve_off_request(request_id):
+    if current_user.username != 'admin1':
+        abort(404)
+    off_request = OffRequest.query.get_or_404(request_id)
+    off_request.status = 'Approved'
+    # Add off request to user's attendance
+    user = User.query.get(off_request.user_id)
+    attendance = Attendance(date=off_request.date, status='Off', duration=off_request.duration,
+                            user_id=user.id, location=off_request.location,
+                            time_of_submission=off_request.time_of_submission)
+    db.session.add(attendance)
+    db.session.commit()
+    flash('Off request has been approved!', 'success')
+    return redirect(url_for('off_balance'))
+
+
+@app.route("/deny_off_request/<int:request_id>")
+@login_required
+def deny_off_request(request_id):
+    if current_user.username != 'admin1':
+        abort(404)
+    off_request = OffRequest.query.get_or_404(request_id)
+    off_request.status = 'Denied'
+    db.session.commit()
+    flash('Off request has been denied!', 'success')
+    return redirect(url_for('off_balance'))
 
 
 @app.route("/all_attendance")

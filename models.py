@@ -1,3 +1,4 @@
+from sqlalchemy import Time  # add this line
 from extensions import db, login_manager
 from flask_login import UserMixin
 from datetime import datetime
@@ -11,19 +12,31 @@ class User(db.Model, UserMixin):
     image_file = db.Column(db.LargeBinary, nullable=False,
                            default=b'')  # Profile picture
     off_balance = db.Column(db.Integer, default=0)
+    off_requests = db.relationship('OffRequest', backref='user', lazy=True)
+    attendances = db.relationship('Attendance', backref='user', lazy=True)
 
     def __repr__(self):
         return f"User('{self.username}')"
+
+    @classmethod
+    def get_username(cls, user_id):
+        user = cls.query.get(user_id)
+        if user:
+            return user.username
+        else:
+            return None
 
 
 class Attendance(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.DateTime, nullable=False)
     status = db.Column(db.String(20), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    duration = db.Column(db.String(20), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey(
+        'user.id'), nullable=False)  # Only one user_id
     time_of_submission = db.Column(
         db.DateTime, default=datetime.utcnow, nullable=False)
-    location = db.Column(db.String, nullable=True)  # add this line
+    location = db.Column(db.String, nullable=True)
 
     def __repr__(self):
         return f"Attendance('{self.user_id}', '{self.date}', '{self.status}', '{self.time_of_submission}', '{self.location}')"
@@ -38,6 +51,17 @@ class Task(db.Model):
 
     def __repr__(self):
         return f"Task('{self.task_name}', '{self.assigned_to}', '{self.created_by}')"
+
+
+class OffRequest(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.DateTime, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    location = db.Column(db.String(120), nullable=False)
+    time_of_submission = db.Column(
+        db.DateTime, default=datetime.utcnow, nullable=False)
+    duration = db.Column(db.String(20), nullable=False)
+    status = db.Column(db.String(20), nullable=False, default='Pending')
 
 
 @login_manager.user_loader

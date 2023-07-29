@@ -2,7 +2,7 @@ from wtforms import SelectField
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed
 from wtforms import StringField, PasswordField, SubmitField, BooleanField, SelectField, IntegerField, SelectMultipleField
-from wtforms.fields import DateField
+from wtforms.fields import DateField, DateTimeField, TimeField
 from wtforms.validators import DataRequired, Length, EqualTo, ValidationError, InputRequired, Length, AnyOf
 import datetime
 from models import User
@@ -45,9 +45,9 @@ class ChangePasswordForm(FlaskForm):
 
 
 class AttendanceForm(FlaskForm):
-    date = DateField('Date', format='%Y-%m-%d', validators=[DataRequired()])
     status = SelectField('Status', choices=['Present', 'AL', 'AO', 'CCL', 'DA', 'EFO', 'FPUL', 'HL', 'MA', 'MC', 'MO',
                          'MRL', 'OC', 'OFF', 'OL', 'OML', 'PCL', 'PL', 'RL', 'RSI', 'RSO', 'SHRO', 'UL', 'WFH'], validators=[DataRequired()])
+    duration = SelectField('Duration', choices=['AM', 'PM', 'Full Day'])
     submit = SubmitField('Submit')
 
 
@@ -69,3 +69,8 @@ class OffBalanceForm(FlaskForm):
         'Off Balance Change', validators=[DataRequired()])
     add = SubmitField('Add Off')
     subtract = SubmitField('Subtract Off')
+
+
+class OffRequestForm(FlaskForm):
+    date = DateField('Date', format='%Y-%m-%d', validators=[DataRequired()])
+    submit = SubmitField('Request Off')

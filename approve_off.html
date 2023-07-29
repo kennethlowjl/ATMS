@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Approve OFF</h1>
+{% for off_request in off_requests %}
+<form method="POST">
+    <p>User ID: {{ off_request.user_id }}</p>
+    <p>Date: {{ off_request.date.strftime("%Y-%m-%d") }}</p>
+    <input type="hidden" name="off_request_id" value="{{ off_request.id }}">
+    <input type="submit" value="Approve">
+</form>
+<hr>
+<a href="{{ url_for('approve_off', request_id=off_request.id, decision='Yes') }}">Yes</a>
+<a href="{{ url_for('approve_off', request_id=off_request.id, decision='No') }}">No</a>
+{% endfor %}
+{% endblock content %}
