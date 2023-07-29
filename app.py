@@ -153,7 +153,7 @@ def attendance():
             date = start_date + timedelta(days=i)
 
             gmaps = googlemaps.Client(
-                key='AIzaSyDaSOYJH2Ak5nMD2p55MtdipOi270GgZGM')
+                key='hidden')
             geolocate_result = gmaps.geolocate()
 
             lat = geolocate_result['location']['lat']
